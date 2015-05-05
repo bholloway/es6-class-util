@@ -7,25 +7,34 @@
  * @param {...object|function} sources Any number of object to copy members from
  */
 export default function extend(destination, ...sources) {
-  'use strict';
-  var isValid = (typeof destination === 'object') || (typeof destination === 'function');
+  var isValid = destination && ((typeof destination === 'object') || (typeof destination === 'function'));
   if (isValid) {
     for (var source of sources) {
-      if (source !== destination) {
-        for (var name in source) {
-
-          // find the property on the candidate or its prototype chain
-          var current    = source;
-          var descriptor = null;
-          while (current && !(descriptor)) {
-            descriptor = Object.getOwnPropertyDescriptor(current, name);
-            current    = Object.getPrototypeOf(current);
-          }
-
-          // bind the descriptor and apply it to the given candidate
-          Object.defineProperty(destination, name, descriptor);
+      isValid = source && (source !== destination) && ((typeof source === 'object') || (typeof source === 'function'));
+      if (isValid) {
+        var current = source;
+        var proto   = Object.getPrototypeOf(current);
+        while (proto !== null) {
+          copyProperties(current, destination);
+          current = proto;
+          proto   = Object.getPrototypeOf(current);
         }
       }
+    }
+  }
+}
+
+/**
+ * Copy the enumerable members from the <code>source</code> to the <code>destination</code>.
+ * @param {object} source The object on which to discover members
+ * @param {object} destination The object to assign members to
+ */
+function copyProperties(source, destination) {
+  var names = Object.getOwnPropertyNames(source);
+  for (var name of names) {
+    if (!destination.hasOwnProperty(name)) {
+      var descriptor = Object.getOwnPropertyDescriptor(source, name);
+      Object.defineProperty(destination, name, descriptor);
     }
   }
 }

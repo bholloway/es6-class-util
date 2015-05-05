@@ -4,24 +4,33 @@
  * @returns {object|function} The given candidate
  */
 export default function bind(candidate) {
-  'use strict';
-  var isValid = (typeof candidate === 'object') || (typeof candidate === 'function');
+  var isValid = candidate && ((typeof candidate === 'object') || (typeof candidate === 'function'));
   if (isValid) {
-    for (var name in candidate) {
-
-      // find the property on the candidate or its prototype chain
-      var current    = candidate;
-      var descriptor = null;
-      while (current && !(descriptor)) {
-        descriptor = Object.getOwnPropertyDescriptor(current, name);
-        current    = Object.getPrototypeOf(current);
-      }
-
-      // bind the descriptor and apply it to the given candidate
-      Object.defineProperty(candidate, name, bindDescriptor(descriptor, candidate));
+    var current = candidate;
+    var proto   = Object.getPrototypeOf(current);
+    while (proto !== null) {
+      copyProperties(current, candidate);
+      current = proto;
+      proto   = Object.getPrototypeOf(current);
     }
   }
   return candidate;
+}
+
+/**
+ * Copy the enumerable members from the <code>source</code> to the <code>destination</code> while binding to the
+ * <code>destination</code>.
+ * @param {object} source The object on which to discover members
+ * @param {object} destination The object to assign members to
+ */
+function copyProperties(source, destination) {
+  var names = Object.getOwnPropertyNames(source);
+  for (var name of names) {
+    if (!destination.hasOwnProperty(name)) {
+      var descriptor = bindDescriptor(Object.getOwnPropertyDescriptor(source, name), destination);
+      Object.defineProperty(destination, name, descriptor);
+    }
+  }
 }
 
 /**
@@ -31,7 +40,6 @@ export default function bind(candidate) {
  * @return {object} A new descriptor with bound accessors
  */
 function bindDescriptor(descriptor, target) {
-  'use strict';
   var result = { };
   for (var field in descriptor) {
     result[field] = (typeof descriptor[field] === 'function') ? descriptor[field].bind(target) : descriptor[field];
